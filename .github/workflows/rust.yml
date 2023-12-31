@@ -16,6 +16,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+
+    # install nightly rust for experiment features in kiddo
+    - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            override: true
+            components: rustfmt, clippy
+
     - name: Build
       run: cargo build --verbose
     - name: Run tests
