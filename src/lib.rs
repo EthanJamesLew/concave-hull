@@ -2,13 +2,36 @@
 
 use kiddo::{KdTree, SquaredEuclidean};
 
-use std::f64::consts::PI;
 use std::collections::HashMap;
+use std::f64::consts::PI;
 
-pub mod point;
 pub mod binding;
+pub mod point;
 use point::{Point, PointValue};
 
+/// Computes the concave hull of a given set of points.
+///
+/// This function iteratively calls k-nearest neighbors based concave hull algorithm.
+///
+/// # Arguments
+///
+/// * `dataset` -  2D point cloud.
+/// * `k` - number of nearest neighbors.
+/// * `iterate` - A boolean flag that, when set to `false`, stops the iteration
+///               as soon as the algorithm succeeds.
+///
+/// # Returns
+///
+/// Returns a vector of `Point` structures representing the concave hull of the provided dataset.
+/// If the hull cannot be computed, it returns an empty vector.
+///
+/// # Examples
+///
+/// ```
+/// let mut dataset = vec![Point { x: 1.0, y: 1.0, id: 1 }, Point { x: 2.0, y: 2.0, id: 2 }];
+/// let k = 3;
+/// let hull = concave_hull(&mut dataset, k, true);
+/// ```
 pub fn concave_hull(dataset: &mut Vec<Point>, mut k: usize, iterate: bool) -> Vec<Point> {
     while k < dataset.len() {
         let mut hull = Vec::<Point>::new();
@@ -28,16 +51,19 @@ fn concave_hull_inner(point_list: &mut Vec<Point>, k: usize, hull: &mut Vec<Poin
         hull.extend(point_list.iter().cloned());
         return true;
     }
-    
+
     // build a kd tree so we can do the spatial queries
     let mut tree: KdTree<_, 2> = KdTree::new(); //(&entries).into();
     for point in point_list.iter() {
         tree.add(&[point.x, point.y], point.id)
     }
-    
+
     // map id to points for lookup
-    let mut point_map: HashMap<u64, Point> = point_list.iter().map(|point| (point.id, point.clone())).collect();
-    
+    let mut point_map: HashMap<u64, Point> = point_list
+        .iter()
+        .map(|point| (point.id, point.clone()))
+        .collect();
+
     // Initialize hull with the min-y point
     let mut first_point = find_min_y_point(point_list);
     hull.push(first_point.clone());
@@ -51,7 +77,7 @@ fn concave_hull_inner(point_list: &mut Vec<Point>, k: usize, hull: &mut Vec<Poin
     let mut step = 1usize;
 
     // Iterate until we reach the start, or until there's no points left to process
-	while (!(current_point == first_point) || step == 1) && hull.len() != point_list.len() {
+    while (!(current_point == first_point) || step == 1) && hull.len() != point_list.len() {
         if step == 4 {
             first_point.id = point_list.len() as u64;
             let p = first_point.clone();
@@ -62,28 +88,22 @@ fn concave_hull_inner(point_list: &mut Vec<Point>, k: usize, hull: &mut Vec<Poin
         let cp = current_point.clone();
         let knn = tree.nearest_n::<SquaredEuclidean>(&[cp.x, cp.y], k);
         let mut nearest: Vec<PointValue> = knn
-                .iter()
-                .map(|p| {
-                    let point = point_map.get(&p.item).unwrap();
-                    PointValue{
-                        point: point.clone(),
-                        distance: p.distance,
-                        angle: angle(&current_point, point)
-
-                    }
-                })
-                .collect();
-        let c_points = sort_by_angle(
-                &mut nearest,
-                &current_point, 
-                prev_angle
-        );
+            .iter()
+            .map(|p| {
+                let point = point_map.get(&p.item).unwrap();
+                PointValue {
+                    point: point.clone(),
+                    distance: p.distance,
+                    angle: angle(&current_point, point),
+                }
+            })
+            .collect();
+        let c_points = sort_by_angle(&mut nearest, &current_point, prev_angle);
 
         let mut its = true;
         let mut i = 0usize;
 
         while its && i < c_points.len() {
-
             let mut last_point = 0;
             if *c_points.get(i).unwrap() == first_point {
                 last_point = 1;
@@ -93,8 +113,8 @@ fn concave_hull_inner(point_list: &mut Vec<Point>, k: usize, hull: &mut Vec<Poin
             its = false;
 
             while !its && j < hull.len() - last_point {
-                let line1 = (hull.get(step-1).unwrap(), c_points.get(i).unwrap());
-                let line2 = (hull.get(step-j-1).unwrap(), hull.get(step-j).unwrap());
+                let line1 = (hull.get(step - 1).unwrap(), c_points.get(i).unwrap());
+                let line2 = (hull.get(step - j - 1).unwrap(), hull.get(step - j).unwrap());
                 its = intersects(line1, line2);
                 j += 1;
             }
@@ -102,7 +122,6 @@ fn concave_hull_inner(point_list: &mut Vec<Point>, k: usize, hull: &mut Vec<Poin
             if its {
                 i += 1;
             }
-
         }
 
         if its {
@@ -119,11 +138,9 @@ fn concave_hull_inner(point_list: &mut Vec<Point>, k: usize, hull: &mut Vec<Poin
         tree.remove(&[cp.x, cp.y], cp.id);
 
         step += 1;
-
     }
 
     let new_end = remove_hull(point_list, hull);
-    
 
     multiple_point_in_polygon(&new_end, hull)
 }
@@ -131,7 +148,8 @@ fn concave_hull_inner(point_list: &mut Vec<Point>, k: usize, hull: &mut Vec<Poin
 fn find_min_y_point(points: &[Point]) -> Point {
     assert!(!points.is_empty());
 
-    points.iter()
+    points
+        .iter()
         .min_by(|a, b| {
             if a.y == b.y {
                 greater_than(a.x, b.x)
@@ -144,11 +162,19 @@ fn find_min_y_point(points: &[Point]) -> Point {
 }
 
 fn greater_than(a: f64, b: f64) -> std::cmp::Ordering {
-    if a > b { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less }
+    if a > b {
+        std::cmp::Ordering::Greater
+    } else {
+        std::cmp::Ordering::Less
+    }
 }
 
 fn less_than(a: f64, b: f64) -> std::cmp::Ordering {
-    if a < b { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater }
+    if a < b {
+        std::cmp::Ordering::Less
+    } else {
+        std::cmp::Ordering::Greater
+    }
 }
 
 fn sort_by_angle(values: &mut [PointValue], from: &Point, prev_angle: f64) -> Vec<Point> {
@@ -201,7 +227,6 @@ fn intersects(a: (&Point, &Point), b: (&Point, &Point)) -> bool {
         let x = (b2 * c1 - b1 * c2) / det;
         let y = (a1 * c2 - a2 * c1) / det;
 
-        
         ax1.min(ax2) <= x
             && (x <= ax1.max(ax2))
             && (ay1.min(ay2) <= y)
@@ -237,7 +262,9 @@ fn point_in_polygon(point: &Point, polygon: &[Point]) -> bool {
     let mut v0 = &polygon[0];
 
     for v1 in polygon.iter() {
-        if (((v0.y <= y) && (y < v1.y)) || ((v1.y <= y) && (y < v0.y))) && ((v1.y - v0.y).abs() >= 1E-10) {
+        if (((v0.y <= y) && (y < v1.y)) || ((v1.y <= y) && (y < v0.y)))
+            && ((v1.y - v0.y).abs() >= 1E-10)
+        {
             let tdbl1 = (y - v0.y) / (v1.y - v0.y);
             let tdbl2 = v1.x - v0.x;
 
@@ -260,45 +287,189 @@ mod tests {
     #[test]
     fn test_concave_hull() {
         let mut point_list = vec![
-            Point {x: 0.0, y: 1.0, id: 0},
-            Point {x: -1.0, y: 0.0, id: 1},
-            Point {x: 1.0, y: 0.0, id: 2},
+            Point {
+                x: 0.0,
+                y: 1.0,
+                id: 0,
+            },
+            Point {
+                x: -1.0,
+                y: 0.0,
+                id: 1,
+            },
+            Point {
+                x: 1.0,
+                y: 0.0,
+                id: 2,
+            },
         ];
         let hull = concave_hull(&mut point_list, 1, true);
-        assert!(hull.len()  == 3);
-        
+        assert!(hull.len() == 3);
+
         let mut point_list = vec![
-            Point {x: 1.0 / 2.0, y: 1.0 / 2.0, id: 0},
-            Point {x: -1.0 / 2.0, y: 1.0 / 2.0, id: 1},
-            Point {x: -1.0 / 2.0, y: -1.0 / 2.0, id: 2},
-            Point {x: 1.0 / 2.0, y: -1.0 / 2.0, id: 3},
-            Point {x: 0.0, y: 0.0, id: 4}
+            Point {
+                x: 1.0 / 2.0,
+                y: 1.0 / 2.0,
+                id: 0,
+            },
+            Point {
+                x: -1.0 / 2.0,
+                y: 1.0 / 2.0,
+                id: 1,
+            },
+            Point {
+                x: -1.0 / 2.0,
+                y: -1.0 / 2.0,
+                id: 2,
+            },
+            Point {
+                x: 1.0 / 2.0,
+                y: -1.0 / 2.0,
+                id: 3,
+            },
+            Point {
+                x: 0.0,
+                y: 0.0,
+                id: 4,
+            },
         ];
         let _hull = concave_hull(&mut point_list, 1, true);
     }
 
     fn test_intersects() {
         let mut values = HashMap::new();
-        values.insert('A', Point { x:  0.0, y:  0.0, id: 0 });
-        values.insert('B', Point { x: -1.5, y:  3.0, id: 0 });
-        values.insert('C', Point { x:  2.0, y:  2.0, id: 0 });
-        values.insert('D', Point { x: -2.0, y:  1.0, id: 0 });
-        values.insert('E', Point { x: -2.5, y:  5.0, id: 0 });
-        values.insert('F', Point { x: -1.5, y:  7.0, id: 0 });
-        values.insert('G', Point { x:  1.0, y:  9.0, id: 0 });
-        values.insert('H', Point { x: -4.0, y:  7.0, id: 0 });
-        values.insert('I', Point { x:  3.0, y: 10.0, id: 0 });
-        values.insert('J', Point { x:  2.0, y: 11.0, id: 0 });
-        values.insert('K', Point { x: -1.0, y: 11.0, id: 0 });
-        values.insert('L', Point { x: -3.0, y: 11.0, id: 0 });
-        values.insert('M', Point { x: -5.0, y:  9.5, id: 0 });
-        values.insert('N', Point { x: -6.0, y:  7.5, id: 0 });
-        values.insert('O', Point { x: -6.0, y:  4.0, id: 0 });
-        values.insert('P', Point { x: -5.0, y:  2.0, id: 0 });
+        values.insert(
+            'A',
+            Point {
+                x: 0.0,
+                y: 0.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'B',
+            Point {
+                x: -1.5,
+                y: 3.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'C',
+            Point {
+                x: 2.0,
+                y: 2.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'D',
+            Point {
+                x: -2.0,
+                y: 1.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'E',
+            Point {
+                x: -2.5,
+                y: 5.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'F',
+            Point {
+                x: -1.5,
+                y: 7.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'G',
+            Point {
+                x: 1.0,
+                y: 9.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'H',
+            Point {
+                x: -4.0,
+                y: 7.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'I',
+            Point {
+                x: 3.0,
+                y: 10.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'J',
+            Point {
+                x: 2.0,
+                y: 11.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'K',
+            Point {
+                x: -1.0,
+                y: 11.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'L',
+            Point {
+                x: -3.0,
+                y: 11.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'M',
+            Point {
+                x: -5.0,
+                y: 9.5,
+                id: 0,
+            },
+        );
+        values.insert(
+            'N',
+            Point {
+                x: -6.0,
+                y: 7.5,
+                id: 0,
+            },
+        );
+        values.insert(
+            'O',
+            Point {
+                x: -6.0,
+                y: 4.0,
+                id: 0,
+            },
+        );
+        values.insert(
+            'P',
+            Point {
+                x: -5.0,
+                y: 2.0,
+                id: 0,
+            },
+        );
 
         let test = |a1: char, a2: char, b1: char, b2: char, expected: bool| {
-            let line1 = (&values[&a1], &values[&a2] );
-            let line2 = (&values[&b1], &values[&b2] );
+            let line1 = (&values[&a1], &values[&a2]);
+            let line2 = (&values[&b1], &values[&b2]);
             assert!(intersects(line1, line2) == expected);
         };
 
@@ -328,24 +499,120 @@ mod tests {
 
     fn test_angle() {
         let test = |p: Point, expected: f64| {
-            let actual = to_degrees(angle(&Point { x: 0.0, y: 0.0, id: 0 }, &p));
-            assert!((actual == expected), "Test failed for point: ({}, {})", p.x, p.y);
+            let actual = to_degrees(angle(
+                &Point {
+                    x: 0.0,
+                    y: 0.0,
+                    id: 0,
+                },
+                &p,
+            ));
+            assert!(
+                (actual == expected),
+                "Test failed for point: ({}, {})",
+                p.x,
+                p.y
+            );
         };
 
         let value = to_degrees((3.0f64 / 4.0).atan());
 
-        test(Point { x:  5.0, y:  0.0, id: 0 }, 0.0);
-        test(Point { x:  4.0, y:  3.0, id: 0 }, 360.0 - value);
-        test(Point { x:  3.0, y:  4.0, id: 0 }, 270.0 + value);
-        test(Point { x:  0.0, y:  5.0, id: 0 }, 270.0);
-        test(Point { x: -3.0, y:  4.0, id: 0 }, 270.0 - value);
-        test(Point { x: -4.0, y:  3.0, id: 0 }, 180.0 + value);
-        test(Point { x: -5.0, y:  0.0, id: 0 }, 180.0);
-        test(Point { x: -4.0, y: -3.0, id: 0 }, 180.0 - value);
-        test(Point { x: -3.0, y: -4.0, id: 0 }, 90.0 + value);
-        test(Point { x:  0.0, y: -5.0, id: 0 }, 90.0);
-        test(Point { x:  3.0, y: -4.0, id: 0 }, 90.0 - value);
-        test(Point { x:  4.0, y: -3.0, id: 0 }, value);
+        test(
+            Point {
+                x: 5.0,
+                y: 0.0,
+                id: 0,
+            },
+            0.0,
+        );
+        test(
+            Point {
+                x: 4.0,
+                y: 3.0,
+                id: 0,
+            },
+            360.0 - value,
+        );
+        test(
+            Point {
+                x: 3.0,
+                y: 4.0,
+                id: 0,
+            },
+            270.0 + value,
+        );
+        test(
+            Point {
+                x: 0.0,
+                y: 5.0,
+                id: 0,
+            },
+            270.0,
+        );
+        test(
+            Point {
+                x: -3.0,
+                y: 4.0,
+                id: 0,
+            },
+            270.0 - value,
+        );
+        test(
+            Point {
+                x: -4.0,
+                y: 3.0,
+                id: 0,
+            },
+            180.0 + value,
+        );
+        test(
+            Point {
+                x: -5.0,
+                y: 0.0,
+                id: 0,
+            },
+            180.0,
+        );
+        test(
+            Point {
+                x: -4.0,
+                y: -3.0,
+                id: 0,
+            },
+            180.0 - value,
+        );
+        test(
+            Point {
+                x: -3.0,
+                y: -4.0,
+                id: 0,
+            },
+            90.0 + value,
+        );
+        test(
+            Point {
+                x: 0.0,
+                y: -5.0,
+                id: 0,
+            },
+            90.0,
+        );
+        test(
+            Point {
+                x: 3.0,
+                y: -4.0,
+                id: 0,
+            },
+            90.0 - value,
+        );
+        test(
+            Point {
+                x: 4.0,
+                y: -3.0,
+                id: 0,
+            },
+            value,
+        );
     }
 
     #[test]

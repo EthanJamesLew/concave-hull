@@ -1,7 +1,7 @@
-use crate::point::{Point};
+use crate::point::Point;
 
-use pyo3::prelude::*;
 use numpy::{PyArray2, PyReadonlyArray2};
+use pyo3::prelude::*;
 
 fn numpy_to_vec_points(array: PyReadonlyArray2<f64>) -> PyResult<Vec<Point>> {
     let rows = array.shape()[0];
@@ -23,22 +23,31 @@ fn numpy_to_vec_points(array: PyReadonlyArray2<f64>) -> PyResult<Vec<Point>> {
         let y = *array.get([i, 1]).ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyIndexError, _>("Index out of bounds")
         })?;
-        points.push(Point { x, y, id: (i as u64) });
+        points.push(Point {
+            x,
+            y,
+            id: (i as u64),
+        });
     }
 
     Ok(points)
 }
 
 #[pyfunction]
-pub fn concave_hull_2d(py: Python<'_>, dataset: &PyArray2<f64>, k: usize, iterate: bool) -> PyResult<Py<PyArray2<f64>>> {
+pub fn concave_hull_2d(
+    py: Python<'_>,
+    dataset: &PyArray2<f64>,
+    k: usize,
+    iterate: bool,
+) -> PyResult<Py<PyArray2<f64>>> {
     let mut dataset_vec = numpy_to_vec_points(dataset.readonly())?;
     let result = crate::concave_hull(&mut dataset_vec, k, iterate);
 
     // Create a new 2D NumPy array
-    let mut array = unsafe{ PyArray2::<f64>::new(py, [result.len(), 3], false)};
+    let mut array = unsafe { PyArray2::<f64>::new(py, [result.len(), 3], false) };
 
     // Obtain a mutable slice of the entire array
-    let array_slice = unsafe{ array.as_slice_mut().unwrap() };
+    let array_slice = unsafe { array.as_slice_mut().unwrap() };
 
     // Fill the array with data from the Vec<Point>
     for (i, point) in result.iter().enumerate() {
