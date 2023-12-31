@@ -7,6 +7,14 @@ This is a fast implementation of concave hull using a k-nearest neighbour approa
 
 ![Concave Hull Approximation of Sparse Polynomial Zonotope](./doc/img/spz.png)
 
+## Implementation Details
+
+The current implementation is based on the paper
+
+> Moreira, A., & Santos, M. Y. (2007). Concave hull: A k-nearest neighbours approach for the computation of the region occupied by a set of points.
+
+The algorithm has a parameter $k$, the number of neighbors, and controls the "smoothness" of the hull.
+
 ## Setup Rust
 
 Use Cargo 
