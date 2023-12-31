@@ -1,4 +1,5 @@
 [![Rust](https://github.com/EthanJamesLew/concave-hull/actions/workflows/rust.yml/badge.svg)](https://github.com/EthanJamesLew/concave-hull/actions/workflows/rust.yml)
+[![CI](https://github.com/EthanJamesLew/concave-hull/actions/workflows/Maturin.yml/badge.svg)](https://github.com/EthanJamesLew/concave-hull/actions/workflows/Maturin.yml)
 
 # Fast Concave Hull
 
