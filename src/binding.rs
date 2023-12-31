@@ -44,7 +44,7 @@ pub fn concave_hull_2d(
     let result = crate::concave_hull(&mut dataset_vec, k, iterate);
 
     // Create a new 2D NumPy array
-    let mut array = unsafe { PyArray2::<f64>::new(py, [result.len(), 3], false) };
+    let array = unsafe { PyArray2::<f64>::new(py, [result.len(), 3], false) };
 
     // Obtain a mutable slice of the entire array
     let array_slice = unsafe { array.as_slice_mut().unwrap() };
@@ -61,7 +61,7 @@ pub fn concave_hull_2d(
 }
 
 #[pymodule]
-pub fn concave_hull(py: Python, m: &PyModule) -> PyResult<()> {
+pub fn concave_hull(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Point>()?;
     m.add_function(wrap_pyfunction!(concave_hull_2d, m)?)?;
     Ok(())
