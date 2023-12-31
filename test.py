@@ -6,14 +6,7 @@ import matplotlib.pyplot as plt
 pts = np.random.uniform(size=(10_000,2))
 
 # compute the hull
-res = ch.concave_hull_py(pts, 100, False)
-
-# build a numpy array (TODO: return the automatically)
-hull = []
-for point in res:
-    pt = [point.x, point.y]
-    hull.append(pt)
-hull = np.vstack(hull)
+hull = ch.concave_hull_2d(pts, 100, False)
 
 # plot the points
 plt.scatter(*pts.T, s=1)

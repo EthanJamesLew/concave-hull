@@ -1,9 +1,16 @@
 [package]
-name = "concave-hull"
+name = "concave_hull"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "concave_hull"
+crate-type = ["cdylib"]
+
 [dependencies]
 kiddo = "4.0.0"
+numpy = "0.20.0"
+pyo3 = { version = "0.20.1", features = ["extension-module"] }
+

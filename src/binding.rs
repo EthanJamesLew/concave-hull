@@ -30,15 +30,30 @@ fn numpy_to_vec_points(array: PyReadonlyArray2<f64>) -> PyResult<Vec<Point>> {
 }
 
 #[pyfunction]
-pub fn concave_hull_py(dataset: &PyArray2<f64>, k: usize, iterate: bool) -> PyResult<Vec<Point>> {
+pub fn concave_hull_2d(py: Python<'_>, dataset: &PyArray2<f64>, k: usize, iterate: bool) -> PyResult<Py<PyArray2<f64>>> {
     let mut dataset_vec = numpy_to_vec_points(dataset.readonly())?;
     let result = crate::concave_hull(&mut dataset_vec, k, iterate);
-    Ok(result)
+
+    // Create a new 2D NumPy array
+    let mut array = unsafe{ PyArray2::<f64>::new(py, [result.len(), 3], false)};
+
+    // Obtain a mutable slice of the entire array
+    let array_slice = unsafe{ array.as_slice_mut().unwrap() };
+
+    // Fill the array with data from the Vec<Point>
+    for (i, point) in result.iter().enumerate() {
+        let start_idx = i * 3;
+        array_slice[start_idx] = point.x;
+        array_slice[start_idx + 1] = point.y;
+        array_slice[start_idx + 2] = point.id as f64; // Assuming you want to store the ID as a float
+    }
+
+    Ok(array.into_py(py))
 }
 
 #[pymodule]
 pub fn concave_hull(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Point>()?;
-    m.add_function(wrap_pyfunction!(concave_hull_py, m)?)?;
+    m.add_function(wrap_pyfunction!(concave_hull_2d, m)?)?;
     Ok(())
 }
