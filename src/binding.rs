@@ -1,8 +1,21 @@
+/// Python Bindings for Fast Concave Hull Algorithm
 use crate::point::Point;
 
 use numpy::{PyArray2, PyReadonlyArray2};
 use pyo3::prelude::*;
 
+/// Converts a 2D NumPy array to a vector of `Point` objects.
+///
+/// Each row of the array should represent a point with 2 columns (x, y coordinates).
+/// This function is used to translate Python data structures into Rust equivalents.
+///
+/// # Arguments
+///
+/// * `array`: PyReadonlyArray2<f64> - A readonly 2D NumPy array.
+///
+/// # Returns
+///
+/// * `PyResult<Vec<Point>>` - A vector of `Point` objects on success, or a Python error on failure.
 fn numpy_to_vec_points(array: PyReadonlyArray2<f64>) -> PyResult<Vec<Point>> {
     let rows = array.shape()[0];
     let columns = array.shape()[1];
@@ -33,6 +46,22 @@ fn numpy_to_vec_points(array: PyReadonlyArray2<f64>) -> PyResult<Vec<Point>> {
     Ok(points)
 }
 
+/// Calculates the concave hull of a dataset in 2D.
+///
+/// This function takes a dataset and a parameter `k`, and computes the concave hull.
+/// The `iterate` flag controls the iteration behavior of the algorithm.
+///
+/// # Arguments
+///
+/// * `py`: Python<'_> - Python interpreter context.
+/// * `dataset`: &PyArray2<f64> - Dataset represented as a 2D NumPy array.
+/// * `k`: usize - The number of neighbours to consider for determining the hull smoothness.
+/// * `iterate`: bool - Whether to iteratively refine the hull.
+///
+/// # Returns
+///
+/// * `PyResult<Py<PyArray2<f64>>>` - A 2D NumPy array representing the concave hull on success,
+///    or a Python error on failure.
 #[pyfunction]
 pub fn concave_hull_2d(
     py: Python<'_>,
@@ -60,6 +89,19 @@ pub fn concave_hull_2d(
     Ok(array.into_py(py))
 }
 
+/// Initializes the Python module for the concave hull algorithm.
+///
+/// This function is called when the Python interpreter loads the module.
+/// It registers the `Point` class and the `concave_hull_2d` function to the Python module.
+///
+/// # Arguments
+///
+/// * `_py`: Python - Python interpreter context.
+/// * `m`: &PyModule - The Python module to initialize.
+///
+/// # Returns
+///
+/// * `PyResult<()>` - Ok on success, or a Python error on failure.
 #[pymodule]
 pub fn concave_hull(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Point>()?;
