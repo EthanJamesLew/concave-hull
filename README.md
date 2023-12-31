@@ -1,3 +1,5 @@
+[![Rust](https://github.com/EthanJamesLew/concave-hull/actions/workflows/rust.yml/badge.svg)](https://github.com/EthanJamesLew/concave-hull/actions/workflows/rust.yml)
+
 # Fast Concave Hull
 
 This is a fast implementation of concave hull using a k-nearest neighbour approach.
