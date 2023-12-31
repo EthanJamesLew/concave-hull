@@ -5,18 +5,9 @@ use kiddo::{KdTree, SquaredEuclidean};
 use std::f64::consts::PI;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-    pub id: u64,
-}
-
-pub struct PointValue {
-    pub point: Point,
-    pub distance: f64,
-    pub angle: f64,
-}
+pub mod point;
+pub mod binding;
+use point::{Point, PointValue};
 
 pub fn concave_hull(dataset: &mut Vec<Point>, mut k: usize, iterate: bool) -> Vec<Point> {
     while k < dataset.len() {
