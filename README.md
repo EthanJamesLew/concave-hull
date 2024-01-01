@@ -5,7 +5,9 @@
 
 This is a fast implementation of concave hull using a k-nearest neighbour approach.
 
-![Concave Hull Approximation of Sparse Polynomial Zonotope](./doc/img/spz.png)
+![Concave Hull Approximation of Hessigheim Benchmark](./doc/img/Mar16_test.png)
+
+*Concave Hull on LiDAR Point Cloud Data with over 1M points. The calculation took 2.88 seconds to run.*
 
 ## Implementation Details
 
